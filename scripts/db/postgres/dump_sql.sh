@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -ex
 
 # Variables
 DB_USER="${DB_USER:?Variable not set or empty}"
@@ -8,11 +7,8 @@ DB_HOST="${DB_HOST:?Variable not set or empty}"
 DB_PORT="${DB_PORT:?Variable not set or empty}"
 DB_NAME="${DB_NAME:?Variable not set or empty}"
 SCHEMA_DUMP_FILE="schema_${DB_NAME}.sql"
-SCHEMA_DUMP_GZ="schema_${DB_NAME}.sql.gz"
 DATA_DUMP_FILE="data_${DB_NAME}.sql"
-DATA_DUMP_GZ="data_${DB_NAME}.sql.gz"
 DB_DUMP_FILE="${DB_NAME}.sql"
-DB_DUMP_GZ="${DB_NAME}.sql.gz"
 
 # Function to dump schema
 dump_schema() {

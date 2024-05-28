@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-set -ex
-# Usage: DB_USER=postgres DB_PASS=postgres DB_HOST=localhost DB_PORT=5432 OLD_DB_NAME=originalDbName NEW_DB_NAME=newDbName DROP_NEW_DB=true ./pgcopy.sh
+# Usage: DB_USER=postgres DB_PASS=postgres DB_HOST=localhost DB_PORT=5432 OLD_DB_NAME=originalDbName NEW_DB_NAME=newDbName DROP_NEW_DB=true ./copy_internal.sh
 
 # Variables
 DB_USER="${DB_USER:?Variable not set or empty}"
