@@ -19,8 +19,8 @@ export PGPASSWORD=$DB_PASS
 
 # Drop the database if it exists and create a new one
 {
-#  psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c "DROP DATABASE IF EXISTS $DB_NAME;"
-#  psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c "CREATE DATABASE $DB_NAME;"
+  psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c "DROP DATABASE IF EXISTS $DB_NAME;"
+  psql -v ON_ERROR_STOP=1 -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -c "CREATE DATABASE $DB_NAME;"
 
   # Check if the file is gzip compressed
   if file "$FILENAME" | grep -q gzip; then
@@ -38,5 +38,5 @@ export PGPASSWORD=$DB_PASS
       psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -f "$FILENAME"
     fi
   fi
-} 2>&1
-# } 2>&1 | tee "${current_date_time}_output.log"
+#} 2>&1
+ } 2>&1 | tee "${FILENAME}_restore_${current_date_time}.log"

@@ -8,13 +8,6 @@ DB_PORT="${DB_PORT:?Variable not set or empty}"
 DB_NAME="${DB_NAME:?Variable not set or empty}"
 DB_DUMP_FILE="${DB_NAME}.bak"
 
-# Function to dump everything
-dump_all() {
-    sqlcmd -S "$DB_HOST,$DB_PORT" -U "$DB_USER" -P "$DB_PASS" -Q "BACKUP DATABASE [$DB_NAME] TO DISK = N'$DB_DUMP_FILE' WITH NOFORMAT, NOINIT, NAME = '$DB_NAME-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
-}
-
-# If no options were passed, dump everything
-if [ $# -eq 0 ]; then
-   echo "No options were passed. Everything will be dumped."
-   dump_all
-fi
+echo "Dumping database $DB_NAME to $DB_DUMP_FILE..."
+sqlcmd -S "$DB_HOST,$DB_PORT" -U "$DB_USER" -P "$DB_PASS" -Q "BACKUP DATABASE [$DB_NAME] TO DISK = N'$DB_DUMP_FILE' WITH NOFORMAT, NOINIT, NAME = '$DB_NAME-full', SKIP, NOREWIND, NOUNLOAD, STATS = 10"
+echo "Database $DB_NAME dumped to $DB_DUMP_FILE"
