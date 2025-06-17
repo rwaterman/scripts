@@ -28,15 +28,32 @@ dump_all() {
     gzip -9 "$DB_DUMP_FILE"
 }
 
+# To restore PGPASSWORD=$DB_PASS pg_restore -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" "${DB_NAME}.dump"
+dump_native() {
+    DUMP_FILE="${DB_NAME}.dump"
+    PGPASSWORD=$DB_PASS pg_dump -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -Fc "$DB_NAME" -f "$DUMP_FILE"
+    echo "Dumped to $DUMP_FILE (custom compressed format)"
+}
+
 # Parse command-line options
-while getopts "s" opt; do
+while getopts "sna" opt; do
   case ${opt} in
     s )
       dump_schema
       dump_data
       exit 0
       ;;
-    \? ) echo "Usage: cmd [-s]"
+    n )
+      dump_native
+      exit 0
+      ;;
+    a )
+      dump_all
+      exit 0
+      ;;
+    \? )
+      echo "Usage: cmd [-s] [-n] [-r]"
+      exit 1
       ;;
   esac
 done
