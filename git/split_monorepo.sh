@@ -1,57 +1,78 @@
-#!/bin/bash
-# - This script will split one or more mono-repository packages into a new Github repository. It requires some manual work to update the to_copy and to_delete sections
-# - It ensures to keep Git History and is why you would use it
-# - There will be some duplication depending upon your Monorepo structure
+#!/usr/bin/env bash
+# Split one or more packages out of a monorepo into a new GitHub repository,
+# preserving git history via `git filter-repo`.
+#
+# Fill in to_copy (paths kept in the NEW repo) and to_delete (paths removed from
+# the CURRENT repo) before running — they are kept separate on purpose, since
+# some paths may be duplicated into the new repo without being removed here.
+# Both repositories must already exist on GitHub.
+#
+# Requires: git-filter-repo (brew install git-filter-repo).
 
-# Define the branch name as an environment variable
+set -euo pipefail
+
 GITHUB_ORG_NAME="org"
 REPOSITORY_CURRENT="repo-current"
 REPOSITORY_NEW="repo-new"
 
 REPO_CURRENT_BRANCH="chore/repo-current"
-REPO_NEW_BRANCH="chore/repo-new" REPO_NEW_BRANCH="chore/repo-new" # suggest using `develop` after done testing
+REPO_NEW_BRANCH="chore/repo-new" # suggest using `develop` after done testing
 
-rm -rf "$REPOSITORY_NEW" "$REPOSITORY_CURRENT"
-git clone -b "$REPO_CURRENT_BRANCH" "git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_CURRENT.git" "$REPOSITORY_NEW"
-cd "$REPOSITORY_NEW" || exit 1
-
-# TODO: Must add files and directories manually
+# TODO: paths to carve into the new repo, e.g. to_copy=("packages/foo" "libs/shared")
 to_copy=()
 
-# Run git filter-repo with the paths
-git filter-repo $(printf -- '--path %s ' "${to_copy[@]// #*/}") || exit 1
-tree -L2
-npm ci || exit 1
-npm run build || exit 1
-npm run test || exit 1
-
-# Repoint the repository to repo-new
-git remote add origin "git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_NEW.git"
-git remote set-url origin "git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_NEW.git" || exit 1
-
-# Check if the new branch exists and create it if it doesn't
-if ! git show-ref --quiet refs/heads/"$REPO_NEW_BRANCH"; then
-  git branch "$REPO_NEW_BRANCH" || exit 1
-fi
-# Push the changes to the new branch
-git push --set-upstream origin "$REPO_NEW_BRANCH" || exit 1
-
-cd ..
-git clone -b "$REPO_CURRENT_BRANCH" "git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_CURRENT.git" repo-current-temp || exit 1
-cd repo-current-temp || exit 1
-
-# TODO: Must add files and directories manually
+# TODO: paths to remove from the current repo (often the same set as to_copy)
 to_delete=()
 
-# Remove each path using git rm -rf
-for path in "${to_delete[@]}"; do
-  git rm -rf "$path"
-done
-npm ci || exit 1
-npm run build || exit 1
-npm run lint || exit 1
-npm run test || exit 1
+if ! command -v git-filter-repo >/dev/null 2>&1; then
+  echo "error: git-filter-repo not found (brew install git-filter-repo)" >&2
+  exit 1
+fi
+if [ ${#to_copy[@]} -eq 0 ]; then
+  echo "error: to_copy is empty; set the paths to carve into $REPOSITORY_NEW" >&2
+  exit 1
+fi
 
-# Commit the changes
+current_url="git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_CURRENT.git"
+new_url="git@github.com:$GITHUB_ORG_NAME/$REPOSITORY_NEW.git"
+
+# --- Build the new repo: clone current, strip down to to_copy with history ---
+rm -rf "$REPOSITORY_NEW" repo-current-temp
+git clone -b "$REPO_CURRENT_BRANCH" "$current_url" "$REPOSITORY_NEW"
+cd "$REPOSITORY_NEW"
+
+filter_args=()
+for path in "${to_copy[@]}"; do
+  filter_args+=(--path "$path")
+done
+git filter-repo "${filter_args[@]}"
+tree -L 2 2>/dev/null || true
+
+npm ci
+npm run build
+npm run test
+
+# filter-repo drops the origin remote; repoint at the new repo.
+git remote remove origin 2>/dev/null || true
+git remote add origin "$new_url"
+
+if ! git show-ref --quiet "refs/heads/$REPO_NEW_BRANCH"; then
+  git branch "$REPO_NEW_BRANCH"
+fi
+git push --set-upstream origin "$REPO_NEW_BRANCH"
+
+# --- Prune the carved paths out of the current repo ---
+cd ..
+git clone -b "$REPO_CURRENT_BRANCH" "$current_url" repo-current-temp
+cd repo-current-temp
+
+if [ ${#to_delete[@]} -gt 0 ]; then
+  git rm -rf "${to_delete[@]}"
+fi
+npm ci
+npm run build
+npm run lint
+npm run test
+
 git commit -m "chore: split repository"
-git push "$REPO_CURRENT_BRANCH"
+git push origin "$REPO_CURRENT_BRANCH"
